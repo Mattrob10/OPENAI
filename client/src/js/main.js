@@ -1,59 +1,86 @@
-
 const OPEN_API_KEY = process.env.OPEN_API_KEY;
-export function onSubmit(e) {
+
+export async function onSubmit(e) {
   e.preventDefault();
- 
-  document.querySelector('.msg').textContent = '';
-  document.querySelector('#image').src = '';
+
+  const msgElement = document.querySelector('.msg');
+  if (msgElement) {
+    msgElement.textContent = ''; 
+  }
 
   const prompt = document.querySelector('#prompt').value;
   const size = document.querySelector('#size').value;
- 
+
   if (prompt === '') {
     alert('Please add some text');
     return;
   }
 
-  generateImageRequest(prompt, size);
+  await generateImageRequest(prompt, size);
 }
 
-// this is the issue with allowing others to use app 
-const API_URL = '/openai/generateimage'; 
-// const API_URL = 'http://localhost:5500/openai/generateimage'; 
+const API_URL = '/openai/generateimage';
 
 async function generateImageRequest(prompt, size) {
   try {
     showSpinner();
 
-    const response = await fetch(API_URL, { 
+    const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        "Authorization": `Bearer ${OPEN_API_KEY}`
+        Authorization: `Bearer ${OPEN_API_KEY}`,
       },
       body: JSON.stringify({
         prompt,
         size,
       }),
     });
+
     if (!response.ok) {
       removeSpinner();
-      throw new Error('That image could not be generated');
+      throw new Error('The images could not be generated');
     }
 
     const data = await response.json();
 
     if (data.data && data.data.length > 0) {
-      const imageUrl = data.data;
-      document.querySelector('#image').src = imageUrl;
+      const imageUrls = data.data;
+      displayImages(imageUrls);
     } else {
-      throw new Error('No image available');
+      throw new Error('No images available');
     }
 
     removeSpinner();
   } catch (error) {
-    document.querySelector('.msg').textContent = error;
+    const msgElement = document.querySelector('.msg');
+    if (msgElement) {
+      msgElement.textContent = error; 
+    }
   }
+}
+
+function displayImages(imageUrls) {
+  const imageContainer = document.querySelector('.image-container');
+  imageContainer.innerHTML = '';
+
+  imageUrls.forEach((imageUrl) => {
+    const imageWrapper = document.createElement('div');
+    imageWrapper.classList.add('image');
+    imageContainer.appendChild(imageWrapper);
+
+    const imageElement = document.createElement('img');
+    imageElement.src = imageUrl;
+    imageElement.alt = 'Generated Image';
+    imageWrapper.appendChild(imageElement);
+
+    const openButton = document.createElement('button');
+    openButton.textContent = 'Open Image';
+    openButton.addEventListener('click', () => {
+      window.open(imageUrl, '_blank');
+    });
+    imageWrapper.appendChild(openButton);
+  });
 }
 
 function showSpinner() {

@@ -7,22 +7,22 @@ const openai = new OpenAIApi(configuration);
 
 const generateImage = async (req, res) => {
   const { prompt, size } = req.body;
-
+  const count = 4;
   const imageSize =
     size === 'small' ? '256x256' : size === 'medium' ? '512x512' : '1024x1024';
 
   try {
     const response = await openai.createImage({
       prompt,
-      n: 1,
+      n: count,
       size: imageSize,
     });
 
-    const imageUrl = response.data.data[0].url;
+    const imageUrls = response.data.data.map((item) => item.url);
 
     res.status(200).json({
       success: true,
-      data: imageUrl,
+      data: imageUrls,
     });
   } catch (error) {
     if (error.response) {
@@ -34,7 +34,7 @@ const generateImage = async (req, res) => {
 
     res.status(400).json({
       success: false,
-      error: 'The image could not be generated',
+      error: 'The images could not be generated',
     });
   }
 };
