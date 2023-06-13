@@ -1,7 +1,99 @@
+// App.js
+import React, { useState } from "react";
 import Logo from "./assests/chatgpt-48.png";
-import { onSubmit } from "./js/main"; 
 import SpinnerImage from "./css/spinner.css";
+import Modal from "./components/modal";
+import { v4 as uuidv4 } from 'uuid';
+
 function App() {
+  const [imageUrls, setImageUrls] = useState([]);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [selectedImageUrl, setSelectedImageUrl] = useState("");
+
+  async function onSubmit(e) {
+    e.preventDefault();
+
+    const msgElement = document.querySelector('.msg');
+    if (msgElement) {
+      msgElement.textContent = ''; 
+    }
+
+    const prompt = document.querySelector('#prompt').value;
+    const size = document.querySelector('#size').value;
+
+    if (prompt === '') {
+      alert('Please add some text');
+      return;
+    }
+
+    try {
+      showSpinner();
+
+      const API_URL = '/openai/generateimage';
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.OPEN_API_KEY}`,
+        },
+        body: JSON.stringify({
+          prompt,
+          size,
+        }),
+      });
+
+      if (!response.ok) {
+        removeSpinner();
+        throw new Error('The images could not be generated');
+      }
+
+      const data = await response.json();
+
+      if (data.data && data.data.length > 0) {
+        const imageUrls = data.data;
+        setImageUrls(imageUrls);
+      } else {
+        throw new Error('No images available');
+      }
+
+      removeSpinner();
+    } catch (error) {
+      const msgElement = document.querySelector('.msg');
+      if (msgElement) {
+        msgElement.textContent = error.message; 
+      }
+      setErrorMessage(error.message);
+      removeSpinner();
+    }
+  }
+
+  function displayImages(imageUrls) {
+    return imageUrls.map((imageUrl) => (
+      <div className="image" key={uuidv4()}>
+        <img src={imageUrl} alt={prompt.value} />
+        <button onClick={() => openModal(imageUrl)}>
+          Open Image
+        </button>
+      </div>
+    ));
+  }
+
+  function openModal(imageUrl) {
+    setSelectedImageUrl(imageUrl);
+  }
+
+  function closeModal() {
+    setSelectedImageUrl("");
+  }
+
+  function showSpinner() {
+    document.querySelector('.spinner').classList.add('show');
+  }
+
+  function removeSpinner() {
+    document.querySelector('.spinner').classList.remove('show');
+  }
+
   return (
     <div className="App">
       <header>
@@ -45,18 +137,25 @@ function App() {
         </section>
         <section className="image">
           <div className="image-container">
-            <div className="msg"></div>
-            <img src="" alt="" id="image" />
+            <div className="msg">{errorMessage}</div>
+            {imageUrls.length > 0 ? (
+              displayImages(imageUrls)
+            ) : (
+              <img src="" alt="" id="image" />
+            )}
           </div>
         </section>
         <footer>made by matthew</footer>
       </main>
       <div
-  className="spinner"
-  style={{
-    backgroundImage: `url(${SpinnerImage})`
-  }}
-></div>
+        className="spinner"
+        style={{
+          backgroundImage: `url(${SpinnerImage})`
+        }}
+      ></div>
+      {selectedImageUrl && (
+        <Modal imageUrl={selectedImageUrl} closeModal={closeModal} />
+      )}
     </div>
   );
 }
